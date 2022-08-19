@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>login</title>
+    <style>
+      html {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: linear-gradient(to bottom, #f7561c, #f2d45b);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #app {
+        width: 400px;
+        height: 300px;
+        background-color: rgba(255, 255, 255, 0.5);
+        border-radius: 10px;
+        padding: 0 20px;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+
+      .input {
+        /* height: 40px; */
+        background-color: rgba(0, 0, 0, 0);
+        border: none;
+        border-bottom: 1px solid #ccc;
+        padding: 10px 5px 5px;
+        margin-bottom: 20px;
+        font-size: 16px;
+      }
+      .input:focus {
+        outline: none;
+        border-bottom-color: #f7561cb8;
+      }
+
+      .btn {
+        background-color: #f7561cb8;
+        color: #fff;
+        margin-top: 30px;
+        border-radius: 10px;
+        text-align: center;
+        padding: 10px 0;
+        user-select: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <input class="input" type="text" placeholder="请输入账号" v-model="username" />
+      <input class="input" type="password" placeholder="请输入密码" v-model="password" />
+      <div class="btn" @click="login">登录</div>
+    </div>
+  </body>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "vue": "./vue.browser.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import { createApp, ref } from 'vue'
+
+    const app = createApp({
+      setup() {
+        const username = ref('')
+        const password = ref('')
+
+        const login = () => {
+          const data = {
+            username: username.value,
+            password: password.value
+          }
+          fetch('http://localhost:8080/user/login', {
+            method: 'post',
+            body: JSON.stringify(data),
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+            .then((res) => res.json())
+            .then((res) => {
+              localStorage.setItem('token', res.token)
+              localStorage.setItem('user', JSON.stringify(data))
+              location.href = '/index.html'
+            })
+        }
+
+        return {
+          username,
+          password,
+          login
+        }
+      }
+    })
+
+    app.mount('#app')
+  </script>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chat room</title>
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div class="users">
+        <div class="user" :class="{select: !user}" @click="checkUser(null)">
+          <img class="avatar" :src="avatar" alt="" />
+          <span class="username">大厅</span>
+        </div>
+        <div class="user" v-for="item in users" :key="item.username" :class="{select: user && user.username === item.username}" @click="checkUser(item)">
+          <img class="avatar" :src="avatar" alt="" />
+          <span class="username">{{item.username}}</span>
+        </div>
+      </div>
+      <div class="chat-box">
+        <div class="news">
+          <div class="message-bar" v-for="(item, i) in msgs" :key="i" :class="{[item.position]: true}">
+            <div class="username">{{item.username}}</div>
+            <div class="message">{{item.msg}}</div>
+          </div>
+        </div>
+        <div class="input-box">
+          <textarea v-model="textareaValue"></textarea>
+          <div class="send" :style="{backgroundColor: sendBgColor}" @click="send">发送</div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "vue": "./vue.browser.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import { createApp, ref, watchEffect, onMounted } from 'vue'
+
+    const app = createApp({
+      setup() {
+        const user = ref(null)
+        const avatar = 'https://bs-develop-share.oss-cn-shenzhen.aliyuncs.com/miniapp/avatar.png'
+        const users = ref([])
+
+        const loginUser = JSON.parse(localStorage.getItem('user'))
+
+        const publicScreenMessage = ref([])
+        const msgs = ref([])
+
+        const textareaValue = ref('')
+        const sendBgColor = ref('#ccc')
+
+        const types = {
+          TOKEN_EXPIRED: 401,
+          ERROR: 0,
+          ALL: 1,
+          SINGE: 2
+        }
+        const ws = new WebSocket(`ws://127.0.0.1:3000?token=${localStorage.getItem('token')}`)
+
+        ws.onmessage = (msg) => {
+          const data = JSON.parse(msg.data)
+
+          switch (data.type) {
+            case types.ALL:
+              users.value = data.data.users
+              const _user = data.data.user
+              console.log(_user)
+              publicScreenMessage.value.push({ username: '管理员', msg: `欢迎${_user.username}加入`, position: 'left' })
+              if (!user.value) {
+                msgs.value = publicScreenMessage.value
+              }
+              break
+            case types.SINGE:
+              console.log(data)
+              const item = users.value.find((item) => item.username === data.user)
+              console.log(item)
+              if (!item.msgs) {
+                item.msgs = [{ username: item.username, msg: data.data }]
+              } else {
+                item.msgs.push({ username: item.username, msg: data.data })
+              }
+              break
+          }
+
+          console.log(users.value)
+        }
+
+        const checkUser = (data) => {
+          if (!data) {
+            msgs.value = publicScreenMessage.value
+          } else {
+            msgs.value = data?.msgs || []
+          }
+          user.value = data
+        }
+
+        const send = () => {
+          ws.send(createMsg(types.SINGE, textareaValue.value, user.value.username))
+          if (!user.value.msgs) {
+            user.value.msgs = [{ username: loginUser.username, msg: textareaValue.value, position: 'right' }]
+          } else {
+            user.value.msgs.push({ username: loginUser.username, msg: textareaValue.value, position: 'right' })
+          }
+          msgs.value = user.value.msgs
+          textareaValue.value = ''
+        }
+
+        const createMsg = (type, value, to, from) => {
+          return JSON.stringify({
+            type,
+            value,
+            to,
+            from
+          })
+        }
+
+        watchEffect(() => {
+          if (textareaValue.value.length) {
+            sendBgColor.value = 'green'
+          } else {
+            sendBgColor.value = '#ccc'
+          }
+        })
+
+        return {
+          user,
+          users,
+          avatar,
+          msgs,
+          send,
+          sendBgColor,
+          textareaValue,
+          checkUser
+        }
+      }
+    })
+
+    app.mount('#app')
+  </script>
+</html>
